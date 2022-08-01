@@ -51,6 +51,7 @@ colnames <- as.character(sapply(test[1,],
 
 
 
+colnames(test)
 colnames(test) <- colnames
 test <- test %>%
   as_tibble%>%
