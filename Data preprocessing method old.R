@@ -1,8 +1,23 @@
-library("minfi")
+
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("minfi")
+
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("ChAMP")
+
+
+library(minfi)
 library(GEOquery)
 library(ChAMP)
 library(tidyverse)
 library(ggplot2)
+
+
+
 
 WORKING_DIR="GSE100825_NEW"
 ARRAY_DATA="GSE100825_RAW.tar"
