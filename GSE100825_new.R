@@ -50,7 +50,7 @@ colnames <- as.character(sapply(test[1,],
                                 pattern = ".*(?=:)"))
 
 
-
+?sapply
 colnames(test)
 colnames(test) <- colnames
 test <- test %>%

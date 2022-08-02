@@ -1,3 +1,9 @@
+library("minfi")
+library(GEOquery)
+library(ChAMP)
+library(tidyverse)
+library(ggplot2)
+
 WORKING_DIR="GSE100825_NEW"
 ARRAY_DATA="GSE100825_RAW.tar"
 DEST=paste(WORKING_DIR,"/",ARRAY_DATA,sep="")
@@ -14,17 +20,38 @@ download.file("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/matri
 
 gse <- getGEO(filename=SERIES_MATRIX)
 
-baseDir <- "."
+baseDir <- "GSE100825_NEW"
 sample_metadata <- pData(phenoData(gse))
 targets <- sample_metadata
 
-targets <- pData(phenoData(gse))
-targets <- targets[order(rownames(targets)),]
-mybase <- unique(gsub("_Red.idat.gz" ,"", gsub("_Grn.idat.gz", "" ,list.files("./GSE100825",pattern = "GSM",recursive = TRUE))))
-mybase <- paste("GSE100825/", mybase, sep = "")
+#use pdata to find the phenotypic data in the set
+targets <-pData(gse)
+
+#finding methyl_array sample sheet
+methyl_array<- read.metharray.sheet(baseDir)
+
+#therefore alternative approach
+
+baseDir <- "GSE100825_NEW"
+R.utils::gunzip("https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL21nnn/GPL21145/suppl/GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz",overwrite=TRUE, remove=FALSE)
+waaaa <- read.metharray.sheet(baseDir,pattern="csv")
+
+
+files <- list.files(WORKING_DIR,pattern = "GSM",recursive = TRUE)
+mybase <- unique(gsub("_Red.idat.gz" ,"", gsub("_Grn.idat.gz", "" ,files)))
+mybase <- paste(WORKING_DIR,"/",mybase,sep="")
+targets$Basename <- mybase
 head(targets)
 
-targets$basename <-mybase
+
+
+files <- list.files(WORKING_DIR,pattern = "GSM",recursive = TRUE)
+mybase <- unique(gsub("_Red.idat.gz" ,"", gsub("_Grn.idat.gz", "" ,files)))
+mybase <- paste(WORKING_DIR,"/",mybase,sep="")
+targets$Basename <- mybase
+head(targets)
+
+targets$Basename <-mybase
 rgSet <- read.metharray.exp(targets = targets)
-mSet <- preprocessRaw(rgSet)
-library("minfi")
+?read.metharray.exp
+unique(targets$Basename)
