@@ -1,5 +1,5 @@
 getwd()
-setwd("/home/mandhri/Documents/R data/")
+setwd("/home/mda/Documents/data")
 getwd()
 
 # Loading libraries
@@ -8,55 +8,87 @@ library(GEOquery)
 library(ChAMP)
 library(tidyverse)
 library(ggplot2)
+library(dplyr)
+library(magrittr)
+
 
 #Making a directory for the files 
 
-dir.create("GSE100825")
-
-ARRAY_DATA="GSE74548/GSE74548_RAW.tar"
-# only download it if it is not present on the system
-if ( !dir.exists("GSE74548/IDAT") ) {
-  dir.create("GSE74548/IDAT")
-  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE74548&format=file",
-                destfile = ARRAY_DATA)
-  untar(exdir = "GSE74548/IDAT", tarfile = ARRAY_DATA)
-}
-
-
+dir.create("GSE100825_s")
 
 # Getting the GEO file
-gse <- getGEO("GSE100825",
+gse_s <- getGEO("GSE100825",
               GSEMatrix = F,
-              getGPL = F)
-?getGEO
+              getGPL = F,
+              destdir = "GSE100825_s/")
 
-GSM_IDs <- gse@header$sample_id
+#Finding GEO ids in the file
+GSM_IDs <- gse_s@header$sample_id
+class(GSM_IDs)
+GSM_IDs
+column_names
+test
 
-pheno <- rbind()
-for (g in GSM_IDs)
-{
-  data <- getGEO(g,
-                 GSEMatrix = TRUE,
-                 AnnotGPL = FALSE,
-                 getGPL = FALSE)
-  
-  pheno <- rbind(pheno,
-                 data@header$characteristics_ch1)
+# Getting pheno characters into a df
+
+## In here Initializing pheno variable as null so that it can be passed via the loop.
+## getGPL in here will be false, if not data@header$characteristics_ch1 row will be duplicated
+
+pheno <- NULL
+
+for (g in GSM_IDs) {
+  data<-getGEO(g,
+               GSEMatrix = TRUE,
+               AnnotGPL = FALSE,
+               getGPL = F)
+  pheno<- rbind(pheno,
+                data@header$characteristics_ch1)  
 }
+
+
+# Extracting first word from a string in character 1 and naming those extracted words as column names 
 
 test <- pheno
 colnames <- as.character(sapply(test[1,],
                                 str_extract,
                                 pattern = ".*(?=:)"))
 
+test <- pheno
+column_names <-str_extract(test[1,],pattern = ".*(?=:)")
+colnames(test)<-column_names
 
-?sapply
-colnames(test)
-colnames(test) <- colnames
-test <- test %>%
-  as_tibble%>%
-  mutate_all(str_extract,
-             pattern = "(?<=:[[:blank:]]).*")%>%
-  mutate(`GEO accession` = GSM_IDs,
-         Sample_Name = GSM_IDs)
+# Adding GSM numbers to the pheno characters
+test<-test%>%
+  as.tibble() %>%
+  mutate_all(str_extract,pattern="(?<=:[[:blank:]]).*")%>%
+  mutate(GEO_accession = GSM_IDs)
+
+
+#Load raw data 
+
+raw_heading <- read.table("GSE100825_SIgnalIntensityMatrix.txt.gz",
+                          nrows = 1)
+
+# File was not able to find in the directory. Therefore, signal intensity file was downloaded
+download.file("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz",destfile = "cpg.txt.gz")
+u<-R.utils::gunzip("cpg.txt.gz",overwrite=T)
+read_file("cpg.txt")
+### side note- signal intensity was not found cz raw data file was not extracted. Anyhow, signal intensity file was downloaded
+# Signal intensity file was moved to the directory
+file.copy("cpg.txt.gz", "GSE100825_s/")
+
+getwd()
+# Reading signal intensity/ raw data 
+## checking for the content of first row in the raw data table
+read.table("cpg.txt",sep = " ")
+raw_heading_s <- read.table("cpg.txt",
+                          nrows = 1)
+#skipping the first line in the row of the raw data
+raw_s <- read.table("cpg.txt.gz",
+                  skip = 1)
+CpGs <- pull(raw_s,
+             var=1)
+
+
+
 
