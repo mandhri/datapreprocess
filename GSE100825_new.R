@@ -3,18 +3,21 @@ setwd("/home/mda/Documents/data")
 getwd()
 
 # Loading libraries
-
+install.packages("HelpersMG")
 library(GEOquery)
 library(ChAMP)
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(magrittr)
-
+library(HelpersMG)
 
 #Making a directory for the files 
 
 dir.create("GSE100825_s")
+WORKING_DIR="GSE100825_s"
+ARRAY_DATA="GSE100825_s.tar"
+DEST=paste(WORKING_DIR,"/",ARRAY_DATA,sep="")
 
 # Getting the GEO file
 gse_s <- getGEO("GSE100825",
@@ -51,6 +54,7 @@ colnames <- as.character(sapply(test[1,],
                                 str_extract,
                                 pattern = ".*(?=:)"))
 
+
 test <- pheno
 column_names <-str_extract(test[1,],pattern = ".*(?=:)")
 colnames(test)<-column_names
@@ -62,87 +66,87 @@ test<-test%>%
   mutate(GEO_accession = GSM_IDs)
 
 
-#Load raw data 
+################Load raw data ################
+getwd()
+#setwd("/home/mda/Documents/data/GSE100825_s/")
 
-raw_heading <- read.table("GSE100825_SIgnalIntensityMatrix.txt.gz",
-                          nrows = 1)
+#Download raw tar files
+system('wget -O idats.tar.gz "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE100825&format=file"')
+file.rename("idats.tar.gz",ARRAY_DATA)
+untar(exdir = "GSE100825_s/IDAT", tarfile = ARRAY_DATA)
 
-# File was not able to find in the directory. Therefore, signal intensity file was downloaded
-download.file("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz",destfile = "cpg.txt.gz")
-R.utils::gunzip("cpg.txt.gz",overwrite=F)
-
-### side note- signal intensity was not found cz raw data file was not extracted. Anyhow, signal intensity file was downloaded
-# Signal intensity file was moved to the directory
-file.copy("cpg.txt.gz", "GSE100825_s/")
-
-# Reading signal intensity/ raw data 
-## checking for the content of first row in the raw data table
-
-raw_heading <- read.table("cpg.txt",
-                          nrows = 1)
-#skipping the first line in the row of the raw data
-raw_s <- read.table("cpg.txt.gz",
-                  skip = 1)
-CpGs <- pull(raw_s,
-             var=1)
-
-#Shortcut for getting CpGs 
-Raw<-read.delim2("cpg.txt", header = TRUE, sep = "\t", dec = ",")
-Cpg<-Raw$ID_REF
-
-
-#Load Sentrix ID and Position and add to pheno table
-library(readxl)
-batch <-("fam.xml") %>%
-  rename(`twin id`=`Sample name`)
-test <- left_join(test,
-                  batch)
-if(!require('methylumi')) {
-  install.packages('methylumi')
-  library('methylumi')
-}
-
-#Download series_matrix
+#Download series matrix file 
+getwd()
+setwd("/home/mda/Documents/data/GSE100825_s/")
 if (! file.exists("GSE100825_series_matrix.txt.gz") ) { 
   URL="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/matrix/GSE100825_series_matrix.txt.gz"
   download.file(URL,destfile = "GSE100825_series_matrix.txt.gz")
 }
-R.utils::gunzip("GSE100825_series_matrix.txt.gz",overwrite=F)
+#  when the network is too slow
+system('wget -O GSE100825_series_matrix.txt.gz "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/matrix/GSE100825_series_matrix.txt.gz"')
 
-Matrix_table <- read.delim2("GSE100825_series_matrix.txt.gz", header = TRUE, sep = "\t", dec = ",")
-head(Matrix_table)
+#Download signal matrix file
 
+download.file("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz'",destfile = "GSE100825_SIgnalIntensityMatrix.txt.gz")
+R.utils::gunzip("GSE100825_signal_intensities.txt.gz",overwrite=F)
+# Connection issue so i used Wget()
+system('wget -O GSE100825_SIgnalIntensityMatrix.txt.gz "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz"')
 
-#RAW IDAT FILES 
+## getting the raw data and cpg sites
+raw_heading <- read.table("GSE100825_SIgnalIntensityMatrix.txt.gz",
+                          nrows = 1)
 
-#Raw data file was not getting downloaded so used wget
-ARRAY_DATA="GSE100825_RAW.tar"
-WORKING_DIR="GSE100825_s"
-DEST=paste(WORKING_DIR,"/",ARRAY_DATA,sep="")
+# Reading signal intensity/ raw data 
+## checking for the content of first row in the raw data table
 
-if ( !dir.exists("GSE100825_s/IDAT") ) {
-  dir.create("GSE100825_s/IDAT")  
-if ( !file.exists(ARRAY_DATA)  ) {
-    system('wget -O idats.tar.gz "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE100825&format=file')
-    file.rename("idats.tar.gz",ARRAY_DATA)
-    untar(exdir = "GSE100825_s/IDAT", tarfile = ARRAY_DATA)
-  }
-}          
+raw_heading <- read.table("GSE100825_SIgnalIntensityMatrix.txt.gz",
+                          nrows = 1)
+#skipping the first line in the row of the raw data
+raw_s <- read.table("GSE100825_SIgnalIntensityMatrix.txt.gz",
+                  skip = 1)
+CpGs <- pull(raw_s,
+             var=1)
 
+#######Shortcut for getting CpGs 
+Raw<-read.delim2("GSE100825_SIgnalIntensityMatrix.txt.gz", header = TRUE, sep = "\t", dec = ",")
+Cpg<-Raw$ID_REF
+#####################################################################
 
-download.file("https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL21nnn/GPL21145/suppl/GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz",destfile = "GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz")
-R.utils::gunzip("GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz",overwrite=F)
-lp<-read.csv("GPL21145_MethylationEPIC_15073387_v-1-0.csv", header = T, sep = ",")
+#Read GPL FILE 
+Matrix_table<-read.csv("IDAT/GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz", header = T, sep = ",")
+
+######################################################################################
+gse <- getGEO(filename="GSE100825_series_matrix.txt.gz")
+sample_metadata <- pData(phenoData(gse))
+targets <- sample_metadata
+setwd("/home/mda/Documents/data/")
+files <- list.files(WORKING_DIR,pattern = "GSM",recursive = TRUE)
+files
+mybase <- unique(gsub("_Red.idat.gz" ,"", gsub("_Grn.idat.gz", "" ,files)))
+mybase
+mybase <- paste(WORKING_DIR,"/",mybase,sep="")
+class(mybase)
+targets$Basename <- mybase
+head(targets)
+
+# Make sure you have the files in the same directory. Due to having files in different wd(), i had to spend 2 days trying to find the error. Sigh!!!!. I forgot the rule 1
 getwd()
-R.utils::gunzip("GSE100825.soft.gz",overwrite=F)
+rgset<-read.metharray.exp(targets = targets)
+rgset
 
-library(Biobase)
-lets_see<-read_file("GSE100825.soft")
+#Reading sample sheet (GPL)
 
-head(lets_see)
-str(lets_see)
+baseDir <- "GSE100825_s"
+sample_sheet_GPL<-read.metharray.sheet(baseDir)
 
+# Lets get Sentrix ID and Sentrix Position from column names
 
+sentrixIDs_post<-targets$description.1
+sentrixIds<- str_extract(sentrixIDs_post,"^[^_:]+")
+class(sentrixIds)
+targets$SentrixID <-sentrixIds
+Sentrix_positions<-str_extract(sentrixIDs_post,"_.+")
+Sentrix_positions
+targets$Sentrix_positions <-Sentrix_positions
 
-
-
+targets
