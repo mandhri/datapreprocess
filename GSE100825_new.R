@@ -25,9 +25,7 @@ gse_s <- getGEO("GSE100825",
 #Finding GEO ids in the file
 GSM_IDs <- gse_s@header$sample_id
 class(GSM_IDs)
-GSM_IDs
-column_names
-test
+
 
 # Getting pheno characters into a df
 
@@ -59,7 +57,7 @@ colnames(test)<-column_names
 
 # Adding GSM numbers to the pheno characters
 test<-test%>%
-  as.tibble() %>%
+  as_tibble() %>%
   mutate_all(str_extract,pattern="(?<=:[[:blank:]]).*")%>%
   mutate(GEO_accession = GSM_IDs)
 
@@ -71,23 +69,79 @@ raw_heading <- read.table("GSE100825_SIgnalIntensityMatrix.txt.gz",
 
 # File was not able to find in the directory. Therefore, signal intensity file was downloaded
 download.file("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz",destfile = "cpg.txt.gz")
-u<-R.utils::gunzip("cpg.txt.gz",overwrite=T)
-read_file("cpg.txt")
+R.utils::gunzip("cpg.txt.gz",overwrite=F)
+
 ### side note- signal intensity was not found cz raw data file was not extracted. Anyhow, signal intensity file was downloaded
 # Signal intensity file was moved to the directory
 file.copy("cpg.txt.gz", "GSE100825_s/")
 
-getwd()
 # Reading signal intensity/ raw data 
 ## checking for the content of first row in the raw data table
-read.table("cpg.txt",sep = " ")
-raw_heading_s <- read.table("cpg.txt",
+
+raw_heading <- read.table("cpg.txt",
                           nrows = 1)
 #skipping the first line in the row of the raw data
 raw_s <- read.table("cpg.txt.gz",
                   skip = 1)
 CpGs <- pull(raw_s,
              var=1)
+
+#Shortcut for getting CpGs 
+Raw<-read.delim2("cpg.txt", header = TRUE, sep = "\t", dec = ",")
+Cpg<-Raw$ID_REF
+
+
+#Load Sentrix ID and Position and add to pheno table
+library(readxl)
+batch <-("fam.xml") %>%
+  rename(`twin id`=`Sample name`)
+test <- left_join(test,
+                  batch)
+if(!require('methylumi')) {
+  install.packages('methylumi')
+  library('methylumi')
+}
+
+#Download series_matrix
+if (! file.exists("GSE100825_series_matrix.txt.gz") ) { 
+  URL="https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/matrix/GSE100825_series_matrix.txt.gz"
+  download.file(URL,destfile = "GSE100825_series_matrix.txt.gz")
+}
+R.utils::gunzip("GSE100825_series_matrix.txt.gz",overwrite=F)
+
+Matrix_table <- read.delim2("GSE100825_series_matrix.txt.gz", header = TRUE, sep = "\t", dec = ",")
+head(Matrix_table)
+
+
+#RAW IDAT FILES 
+
+#Raw data file was not getting downloaded so used wget
+ARRAY_DATA="GSE100825_RAW.tar"
+WORKING_DIR="GSE100825_s"
+DEST=paste(WORKING_DIR,"/",ARRAY_DATA,sep="")
+
+if ( !dir.exists("GSE100825_s/IDAT") ) {
+  dir.create("GSE100825_s/IDAT")  
+if ( !file.exists(ARRAY_DATA)  ) {
+    system('wget -O idats.tar.gz "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE100825&format=file')
+    file.rename("idats.tar.gz",ARRAY_DATA)
+    untar(exdir = "GSE100825_s/IDAT", tarfile = ARRAY_DATA)
+  }
+}          
+
+
+download.file("https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPL21nnn/GPL21145/suppl/GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz",destfile = "GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz")
+R.utils::gunzip("GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz",overwrite=F)
+lp<-read.csv("GPL21145_MethylationEPIC_15073387_v-1-0.csv", header = T, sep = ",")
+getwd()
+R.utils::gunzip("GSE100825.soft.gz",overwrite=F)
+
+library(Biobase)
+lets_see<-read_file("GSE100825.soft")
+
+head(lets_see)
+str(lets_see)
+
 
 
 
