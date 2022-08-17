@@ -68,7 +68,7 @@ test<-test%>%
 
 ################Load raw data ################
 getwd()
-#setwd("/home/mda/Documents/data/GSE100825_s/")
+setwd("/home/mda/Documents/data/GSE100825_s/")
 
 #Download raw tar files
 system('wget -O idats.tar.gz "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE100825&format=file"')
@@ -108,7 +108,7 @@ CpGs <- pull(raw_s,
              var=1)
 
 #######Shortcut for getting CpGs 
-Raw<-read.delim2("GSE100825_SIgnalIntensityMatrix.txt.gz", header = TRUE, sep = "\t", dec = ",")
+Raw<-read.delim2("GSE100825_s/GSE100825_SIgnalIntensityMatrix.txt.gz", header = TRUE, sep = "\t", dec = ",")
 Cpg<-Raw$ID_REF
 #####################################################################
 
@@ -148,5 +148,60 @@ targets$SentrixID <-sentrixIds
 Sentrix_positions<-str_extract(sentrixIDs_post,"_.+")
 Sentrix_positions
 targets$Sentrix_positions <-Sentrix_positions
-
 targets
+
+#Add sample name to merge with matrices
+test <- test %>%
+  mutate(Sentrix_ID = sentrixIds,
+         Sentrix_Position = Sentrix_positions)
+
+write_csv(test,
+          file = "GSE100825 phenotypes.csv")
+
+#Extract meth, unmeth and detP signals
+meth <- raw_s[,seq(3,ncol(raw_s),by=3)] %>% as.matrix()
+rownames(meth) <- CpGs
+colnames(meth) <- test$GEO_accession
+unmeth <- raw_s[,seq(2,ncol(raw_s),by=3)] %>% as.matrix()
+rownames(unmeth) <- CpGs
+colnames(unmeth) <- test$GEO_accession
+detP<- raw_s[,seq(4,ncol(raw_s),by=3)] %>% as.matrix()
+rownames(detP) <- CpGs
+colnames(detP) <- test$GEO_accession
+
+
+## for the raw data did in short cut
+meth1 <- Raw[,seq(3,ncol(Raw),by=3)] %>% as.matrix()
+rownames(meth1) <- Cpg
+colnames(meth1) <- test$GEO_accession
+unmeth1 <- Raw[,seq(2,ncol(Raw),by=3)] %>% as.matrix()
+rownames(unmeth1) <- Cpg
+colnames(unmeth1) <- test$GEO_accession
+detP1 <- Raw[,seq(4,ncol(Raw),by=3)] %>% as.matrix()
+rownames(detP1) <- Cpg
+colnames(detP1) <- test$GEO_accession
+
+
+#Now put data into an methylset object
+library(minfi)
+annotation <- c("IlluminaHumanMethylation450k","ilmn12.hg19")
+names(annotation) <- c("array","annotation")
+methylset=MethylSet(Meth=meth,
+                    Unmeth=unmeth,
+                    annotation = annotation)
+RSet <- ratioConvert(methylset,
+                     what = "both",
+                     keepCN = TRUE)
+GRset <- mapToGenome(RSet)
+predictedSex <- getSex(GRset,
+                       cutoff = -2)$predictedSex
+
+#Troubleshoot gender in this 
+test <- test %>%
+  mutate(gender = ifelse(gender=="Male",
+                         "M",
+                         "F"))
+test$gender==predictedSex #All sexes match!
+targets$`Sex:ch1`
+
+
