@@ -108,7 +108,7 @@ CpGs <- pull(raw_s,
              var=1)
 
 #######Shortcut for getting CpGs 
-Raw<-read.delim2("GSE100825_s/GSE100825_SIgnalIntensityMatrix.txt.gz", header = TRUE, sep = "\t", dec = ",")
+Raw<-read.delim2("GSE100825_SIgnalIntensityMatrix.txt.gz", header = TRUE, sep = "\t", dec = ",")
 Cpg<-Raw$ID_REF
 #####################################################################
 
@@ -117,6 +117,7 @@ Matrix_table<-read.csv("IDAT/GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz", he
 
 ######################################################################################
 gse <- getGEO(filename="GSE100825_series_matrix.txt.gz")
+
 sample_metadata <- pData(phenoData(gse))
 targets <- sample_metadata
 setwd("/home/mda/Documents/data/")
@@ -155,8 +156,10 @@ test <- test %>%
   mutate(Sentrix_ID = sentrixIds,
          Sentrix_Position = Sentrix_positions)
 
+
 write_csv(test,
           file = "GSE100825 phenotypes.csv")
+
 
 #Extract meth, unmeth and detP signals
 meth <- raw_s[,seq(3,ncol(raw_s),by=3)] %>% as.matrix()
@@ -170,29 +173,53 @@ rownames(detP) <- CpGs
 colnames(detP) <- test$GEO_accession
 
 
-## for the raw data did in short cut
-meth1 <- Raw[,seq(3,ncol(Raw),by=3)] %>% as.matrix()
-rownames(meth1) <- Cpg
-colnames(meth1) <- test$GEO_accession
-unmeth1 <- Raw[,seq(2,ncol(Raw),by=3)] %>% as.matrix()
-rownames(unmeth1) <- Cpg
-colnames(unmeth1) <- test$GEO_accession
-detP1 <- Raw[,seq(4,ncol(Raw),by=3)] %>% as.matrix()
-rownames(detP1) <- Cpg
-colnames(detP1) <- test$GEO_accession
+##### For the raw data did in short cut
+
+#methylated 
+methylated <-as.matrix(Raw[,seq(3,ncol(Raw),by=3)])
+rownames(methylated )<-Cpg
+colnames(methylated )<-GSM_IDs
+methylated 
+#Unmethylated
+unmethylated<-as.matrix(Raw[,seq(2,ncol(Raw),by=3)])
+rownames(unmethylated)<-Cpg
+colnames(unmethylated)<-GSM_IDs
+unmethylated
+
+# detP signals
+p_val<-as.matrix(Raw[,seq(4,ncol(Raw),by=3)])
+rownames(p_val)<-Cpg
+colnames(p_val)<-GSM_IDs
+p_val
 
 
 #Now put data into an methylset object
 library(minfi)
-annotation <- c("IlluminaHumanMethylation450k","ilmn12.hg19")
-names(annotation) <- c("array","annotation")
+annotation <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
+BiocManager::install("IlluminaHumanMethylationEPICanno.ilm10b4.hg19",force = T)
+
+names(annotation) <-"annotation"
+
 methylset=MethylSet(Meth=meth,
                     Unmeth=unmeth,
                     annotation = annotation)
+
+methylsetR<- MethylSet(Meth = methylated,
+                       Unmeth = unmethylated,
+                       annotation = annotation)
 RSet <- ratioConvert(methylset,
                      what = "both",
                      keepCN = TRUE)
+
+RsetR<- ratioConvert(methylsetR,
+                     what="both",
+                     keep=T)
+ ?ratioConvert 
+  
 GRset <- mapToGenome(RSet)
+
+mapping_to_genome<-mapToGenome(RsetR)
+?mapToGenome
 predictedSex <- getSex(GRset,
                        cutoff = -2)$predictedSex
 
