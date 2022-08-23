@@ -118,8 +118,9 @@ Matrix_table<-read.csv("IDAT/GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz", he
 
 ######################################################################################
 gse <- getGEO(filename="GSE100825_series_matrix.txt.gz")
-
+dim(gse)
 sample_metadata <- pData(phenoData(gse))
+dim(sample_metadata)
 targets <- sample_metadata
 setwd("/home/mda/Documents/data/")
 files <- list.files(WORKING_DIR,pattern = "GSM",recursive = TRUE)
@@ -130,7 +131,7 @@ mybase <- paste(WORKING_DIR,"/",mybase,sep="")
 class(mybase)
 targets$Basename <- mybase
 head(targets)
-
+dim(targets)
 # Make sure you have the files in the same directory. Due to having files in different wd(), i had to spend 2 days trying to find the error. Sigh!!!!. I forgot the rule 1
 getwd()
 rgset<-read.metharray.exp(targets = targets)
@@ -193,19 +194,15 @@ rownames(p_val)<-Cpg
 colnames(p_val)<-GSM_IDs
 p_val
 
-## Shortcut for detection of p val from rgset
+## Shortcut for detection of p val from rgset. 
 p_val<-detectionP(rgset)
 ######
 
 
 #Now put data into an methylset object
 library(minfi)
-library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
-annotation <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
-BiocManager::install("IlluminaHumanMethylationEPICanno.ilm10b4.hg19",force = T)
-library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
-names(annotation) <-"annotation"
-
+annotation<- 
+names(annotation) <-c("array","annotation")
 methylset=MethylSet(Meth=meth,
                     Unmeth=unmeth,
                     annotation = annotation)
@@ -220,7 +217,8 @@ RSet <- ratioConvert(methylset,
 RsetR<- ratioConvert(methylsetR,
                      what="both",
                      keep=T)
-  
+
+anno <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)  
 GRset <- mapToGenome(RSet)
 
 mapping_to_genome<-mapToGenome(RsetR)
@@ -228,13 +226,6 @@ mapping_to_genome<-mapToGenome(RsetR)
 predictedSex <- getSex(GRset,
                        cutoff = -2)$predictedSex
 
-#Troubleshoot gender in this 
-test <- test %>%
-  mutate(gender = ifelse(gender=="Male",
-                         "M",
-                         "F"))
-test$gender==predictedSex #All sexes match!
-targets$`Sex:ch1`
 
 ###############
 
@@ -254,7 +245,8 @@ predictedSex<-getSex(grset,cutoff = -2)$predictedSex
 detp<- detectionP(rgset)
 keep<-rowSums(detp<0.01) ==ncol(rgset)
 include_sexchrom<-mset[keep,]
-
+dim(detp)
+dim(rgset)
 ## SNP exclude
 include_sexchrom1<-mapToGenome(include_sexchrom)
 include_sexchrom1_nosnp<-dropLociWithSnps(include_sexchrom1)
@@ -275,8 +267,9 @@ beta_include_sexchrom1<-getBeta(include_sexchrom1)
 dim(Mval_include_sexchrom1)
 
 
-## beta and m values with sex chromosome 
+## beta and m values without sex chromosome 
 meth_no_sexchromo<-getMeth(nosex_chromo)
+dim(nosex_chromo)
 unmeth_no_sexchromo<-getUnmeth(nosex_chromo)
 Mval_no_sexchromo<-log2((meth_no_sexchromo+100)/(unmeth_no_sexchromo+100))
 beta_no_sexchromo<-getBeta(nosex_chromo)
@@ -290,4 +283,22 @@ plotting<-plotMDS(Mval_include_sexchrom1, labels=targets$`Sex:ch1`, col=colours,
 
 #Interestingly, top probe (GSM2694066) is a male participant but is more towards female side.Need to do a sex diagnostic
 
+
+if (!requireNamespace("BiocManager", quietly=TRUE))
+  install.packages("BiocManager")
+BiocManager::install(c("minfi","ChAMPdata","Illumina450ProbeVariants.db","sva","IlluminaHumanMethylation450kmanifest","limma","RPMM","DNAcopy","preprocessCore","impute","marray","wateRmelon","goseq","plyr","GenomicRanges","RefFreeEWAS","qvalue","isva","doParallel","bumphunter","quadprog","shiny","shinythemes","plotly","RColorBrewer","DMRcate","dendextend","IlluminaHumanMethylationEPICmanifest","FEM","matrixStats","missMethyl","combinat"),force = T)
+library(ChAMP)
+getwd()
+
+# To get the beta and Mvalues via ChAMP, either can use ChAMP.import and then ChAMP.filter or just ChAMP load.
+champ_import <- champ.import(directory=system.file("extdata",package="ChAMPdata"),arraytype = "EPIC")
+champ_filter <- champ.filter(beta=champ_import$beta,pd=champ_import$pd,detP=champ_import$detP,beadcount=champ_import$beadcount,arraytype = "epic")
+
+#
+myLoad <- champ.load(directory=system.file("extdata",package="ChAMPdata"),arraytype = "epic",filterBeads = F)
+
+colnames(myLoad$beta) 
+
+
+rgset
 
