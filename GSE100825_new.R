@@ -11,6 +11,7 @@ library(ggplot2)
 library(dplyr)
 library(magrittr)
 library(HelpersMG)
+library(limma)
 
 #Making a directory for the files 
 
@@ -192,12 +193,17 @@ rownames(p_val)<-Cpg
 colnames(p_val)<-GSM_IDs
 p_val
 
+## Shortcut for detection of p val from rgset
+p_val<-detectionP(rgset)
+######
+
 
 #Now put data into an methylset object
 library(minfi)
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
 annotation <- "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"
 BiocManager::install("IlluminaHumanMethylationEPICanno.ilm10b4.hg19",force = T)
-
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
 names(annotation) <-"annotation"
 
 methylset=MethylSet(Meth=meth,
@@ -214,7 +220,6 @@ RSet <- ratioConvert(methylset,
 RsetR<- ratioConvert(methylsetR,
                      what="both",
                      keep=T)
- ?ratioConvert 
   
 GRset <- mapToGenome(RSet)
 
@@ -230,5 +235,59 @@ test <- test %>%
                          "F"))
 test$gender==predictedSex #All sexes match!
 targets$`Sex:ch1`
+
+###############
+
+library(minfi)
+
+#method1
+rgset
+mset<-preprocessRaw(rgset)
+rset<-ratioConvert(mset, what = "both", keepCN = TRUE)
+grset<-mapToGenome(rset)
+predictedSex<-getSex(grset,cutoff = -2)$predictedSex
+
+
+#method2
+## sex chromosome include
+
+detp<- detectionP(rgset)
+keep<-rowSums(detp<0.01) ==ncol(rgset)
+include_sexchrom<-mset[keep,]
+
+## SNP exclude
+include_sexchrom1<-mapToGenome(include_sexchrom)
+include_sexchrom1_nosnp<-dropLociWithSnps(include_sexchrom1)
+dim(include_sexchrom1_nosnp)
+
+## sex chromsome exclude
+anno <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+xyprobes<- anno$Name[anno$chr %in% c("chrX","chrY")]
+xyprobes
+nosex_chromo<-include_sexchrom1[which(!rownames(include_sexchrom1) %in% xyprobes)]
+
+
+## beta and m values with sex chromosome 
+meth_with_sexchrom<-getMeth(include_sexchrom1)
+unmeth_with_sexchrom<-getUnmeth(include_sexchrom1)
+Mval_include_sexchrom1<-log2((meth_with_sexchrom+100)/(unmeth_with_sexchrom+100))
+beta_include_sexchrom1<-getBeta(include_sexchrom1)
+dim(Mval_include_sexchrom1)
+
+
+## beta and m values with sex chromosome 
+meth_no_sexchromo<-getMeth(nosex_chromo)
+unmeth_no_sexchromo<-getUnmeth(nosex_chromo)
+Mval_no_sexchromo<-log2((meth_no_sexchromo+100)/(unmeth_no_sexchromo+100))
+beta_no_sexchromo<-getBeta(nosex_chromo)
+dim(Mval_no_sexchromo)
+
+#let's go graphic with MDS plots to depict sex chromosome seperation
+
+targets$`Sex:ch1`<-as.factor(targets$`Sex:ch1`)
+library(limma)
+plotting<-plotMDS(Mval_include_sexchrom1, labels=targets$`Sex:ch1`, col=colours,cex=0.7)
+
+#Interestingly, top probe (GSM2694066) is a male participant but is more towards female side.Need to do a sex diagnostic
 
 
