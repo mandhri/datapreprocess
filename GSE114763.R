@@ -15,14 +15,14 @@ library(HelpersMG)
 library(limma)
 
 #Making a directory for the files 
-
-dir.create("GSE114763")
 WORKING_DIR="GSE114763"
+baseDir<-WORKING_DIR
+dir.create("GSE114763")
 ARRAY_DATA="GSE114763.tar"
 DEST=paste(WORKING_DIR,"/",ARRAY_DATA,sep="")
 
 # Getting the GEO file
-gse_s <- getGEO("GSE114763",
+gse <- getGEO("GSE114763",
                 GSEMatrix = F,
                 getGPL = F,
                 destdir = "GSE114763/")
@@ -76,11 +76,13 @@ setwd("/home/mda/Documents/data/GSE114763/")
 system('wget -O idats.tar.gz "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE114763&format=file"')
 file.rename("idats.tar.gz",ARRAY_DATA)
 untar(exdir = "GSE114763/IDAT", tarfile = ARRAY_DATA)
+#open up the gpl file from the untar files
+R.utils::gunzip("/home/mda/Documents/data/GSE114763/IDAT/GPL21145_MethylationEPIC_15073387_v-1-0.csv.gz",overwrite=T)
 
 
 ############################
 #Since Series matrix is a file preprocess by the authors , avoid using series matrix for analysis. 
-#Use always idat files. 
+#Use always idat files. moreover , no signal matrix file was found. Anyways you can use gpl file from idat files to get signal matrix file.
 #Download series matrix file 
 #getwd()
 #setwd("/home/mda/Documents/data/GSE100825_s/")
@@ -93,10 +95,10 @@ untar(exdir = "GSE114763/IDAT", tarfile = ARRAY_DATA)
 
 #Download signal matrix file
 
-download.file("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz'",destfile = "GSE100825_SIgnalIntensityMatrix.txt.gz")
-R.utils::gunzip("GSE100825_signal_intensities.txt.gz",overwrite=F)
+#download.file("https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz'",destfile = "GSE100825_SIgnalIntensityMatrix.txt.gz")
+#R.utils::gunzip("GSE100825_signal_intensities.txt.gz",overwrite=F)
 # Connection issue so i used Wget()
-system('wget -O GSE100825_SIgnalIntensityMatrix.txt.gz "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz"')
+#system('wget -O GSE100825_SIgnalIntensityMatrix.txt.gz "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/suppl/GSE100825_signal_intensities.txt.gz"')
 
 ## getting the raw data and cpg sites
 raw_heading <- read.table("GSE100825_SIgnalIntensityMatrix.txt.gz",
