@@ -19,7 +19,10 @@ gse_s <- getGEO("GSE55763",
                 getGPL = F,
                 destdir = "GSE55763/")
 
-
+gsessss <- getGEO("GSE55763",
+                GSEMatrix = T,
+                getGPL = F,
+                destdir = "GSE55763/")
 gse<-getGEO("GSE55763")
 
 
@@ -147,3 +150,53 @@ summary(comparedf(reconfirm,final_pheno))
 
 ### No missing values or replicated samples found in both the files. Therefore, this dataset can not have any duplicate 
 #or missing values at this stage##########
+
+##Writing the csv file 
+write_csv(reconfirm,
+          file = "GSE55763 phenotypes.csv")
+
+#Check sex
+library(minfi)
+targets <- read.metharray.sheet(baseDir)
+RGSet <- read.metharray.exp(targets = targets)
+targets$Basename<-targets
+
+##
+baseDir <- system.file("extdata", package = "minfiData")
+list.files(baseDir)
+
+baseDir <- "."
+sample_metadata <- pData(phenoData(gse_s))
+targets <- sample_metadata
+
+files <- list.files(WORKING_DIR,pattern = "GSM",recursive = TRUE)
+mybase <- unique(gsub("_Red.idat.gz" ,"", gsub("_Grn.idat.gz", "" ,files)))
+mybase <- paste(WORKING_DIR,"/",mybase,sep="")
+targets$Basename <- mybase
+head(targets)
+##
+MSet <- preprocessRaw(RGSet)
+RSet <- ratioConvert(MSet, what = "both", keepCN = TRUE)
+GRset <- mapToGenome(RSet)
+predictedSex <- getSex(GRset, cutoff = -2)$predictedSex
+
+files <- list.files(WORKING_DIR,pattern = "GSM",recursive = TRUE)
+mybase <- unique(gsub("_Red.idat.gz" ,"", gsub("_Grn.idat.gz", "" ,files)))
+mybase <- paste(WORKING_DIR,"/",mybase,sep="")
+targets$Basename <- mybase
+head(targets)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
