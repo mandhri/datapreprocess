@@ -95,7 +95,7 @@ R.utils::gunzip("/home/mandhri/nerw/GSE119078/IDAT/GPL13534_HumanMethylation450_
 #download.file(URL,destfile = "GSE100825_series_matrix.txt.gz")
 #}
 #  when the network is too slow
-#system('wget -O GSE100825_series_matrix.txt.gz "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE100nnn/GSE100825/matrix/GSE100825_series_matrix.txt.gz"')
+#system('wget -O GSE65057_series_matrix.txt.gz "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE65nnn/GSE65057/matrix/GSE65057_series_matrix.txt.gz"')
 
 #Download signal matrix file
 
